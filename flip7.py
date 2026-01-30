@@ -50,6 +50,7 @@ class Player:
         self.stopped = False
         self.second_life = False
         self.alive = True
+        self.is_receiving_three_cards_row = False
 
     # Check if number is duplicated
     def has_duplicate_number(self, value):
@@ -58,6 +59,18 @@ class Player:
     # Add number on current list if not duplicated
     def add_number(self, value):
         self.number_cards.append(value)
+
+    # Add special card on special Cards list (normally only "THREE_CARDS_ROW")
+    def add_special_card(self, card):
+        self.special_cards.append(card)
+
+    # Get if got any special card (normally only "THREE_CARDS_ROW")
+    def get_special_cards(self, special_type):
+        return [c for c in self.special_cards if c.special_type == special_type]
+
+    # Remove special cards after the effects (normally only "THREE_CARDS_ROW")
+    def remove_special_card(self, card):
+        self.special_cards.remove(card)
 
     # Check if is a Flip7 (7 diferent Cards)
     def has_flip7(self):
@@ -131,7 +144,7 @@ class Game:
         self.deck = Deck()
         self.round_over = False
 
-    # play the game
+    # Play the game
     def play(self):
         round_number = 1
         # Game ends when at least one player has 200 points
@@ -172,7 +185,7 @@ class Game:
     # Get an option from game
     def take_turn(self, player):
         # IA simple (it stops if 20 points cumulatedfor the current round)
-        if sum(player.number_cards) >= 20:
+        if not player.is_receiving_three_cards_row and sum(player.number_cards) >= 20:
             player.stopped = True
             print(f"{player.name} se planta")
             return
@@ -240,22 +253,48 @@ class Game:
 
         # THREE IN A ROW
         elif card.special_type == "THREE_IN_ROW":
-            # Choose a player to give 3 Cards in a row
-            target = self.choose_target(player)
-            print(f"{target.name} recibe 3 cartas seguidas")
-            for _ in range(3):
-                if not target.alive:
-                    break
-                # Do normal execution of giving a Card
-                self.take_turn(target)
-                if self.round_over:
-                    break
+            # Case 1 : is not receiving cards, start receiving
+            if not player.is_receiving_three_cards_row:
+                target = self.choose_target(player)
+                print(f"{target.name} recibe 3 cartas seguidas")
+
+                target.is_receiving_three_cards_row = True
+
+                for _ in range(3):
+                    if not target.alive or self.round_over:
+                        break
+
+                    self.take_turn(target)
+
+                target.is_receiving_three_cards_row = False
+
+                # Check if recieving another special card THREE_ROW_CARDS
+                pending_three_in_row = target.get_special_cards("THREE_IN_ROW")
+
+                for special in pending_three_in_row:
+                    print(f"{target.name} puede ahora usar su carta THREE_IN_ROW")
+                    target.remove_special_card(special)
+
+                    # Recursivty
+                    new_target = self.choose_target(target)
+                    print(f"{new_target.name} recibe 3 cartas seguidas")
+
+                    new_target.is_receiving_three_cards_row = True
+                    for _ in range(3):
+                        if not new_target.alive or self.round_over:
+                            break
+                        self.take_turn(new_target)
+                    new_target.is_receiving_three_cards_row = False
+
+            # Case 2: is recieving cards => hold for after the actual effect of special Card
+            else:
+                print(f"{player.name} recibe THREE_IN_ROW pero debe esperar")
+                player.add_special_card(card)
     
     # Get player to STOP (because of special card "Stop")
     def choose_target(self, player):
-        candidates = [p for p in self.players if p != player and not p.stopped]
+        candidates = [p for p in self.players if p != player and not p.stopped and p.alive]
         return random.choice(candidates) if candidates else player
-
 
 # ======================
 # MAIN
