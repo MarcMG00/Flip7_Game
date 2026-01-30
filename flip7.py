@@ -184,8 +184,9 @@ class Game:
 
     # Get an option from game
     def take_turn(self, player):
-        # IA simple (it stops if 20 points cumulatedfor the current round)
-        if not player.is_receiving_three_cards_row and sum(player.number_cards) >= 20:
+        # IA simple (it stops if 20 points cumulated for the current round)
+        # => but only if not recieving "three_cards_row" and not having second_life
+        if not player.is_receiving_three_cards_row and not player.second_life and sum(player.number_cards) >= 20:
             player.stopped = True
             print(f"{player.name} se planta")
             return
