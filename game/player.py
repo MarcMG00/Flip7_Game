@@ -16,7 +16,8 @@ class Player:
         self.stopped = False
         self.round_lost = False
         self.second_life = False
-        self.voltear7 = False
+        self.flip7 = False
+        self.is_receiving_three_cards_row = False
 
     def add_card(self, card):
         if isinstance(card, NumberCard):
@@ -33,19 +34,30 @@ class Player:
 
     def numeric_count(self) -> int:
         return len(self.numbers)
+    
+    # Get all of special Cards (if got any special card (normally only "THREE_CARDS_ROW"))
+    def get_special_cards(self, special_type):
+        if special_type in self.specials:
+            print("El jugador tiene al menos una carta TresSeguidas")
+            return [self.specials[special_type]]
+        return []
 
     def calculate_round_points(self) -> int:
-        total = sum(self.numbers.keys())
+        # Sum of normal numbers
+        numbers_sum = sum(self.numbers.keys())
+
+        # Apply mutliplier x2
         multiplier = 1
-        bonus_sum = 0
-
-        for b in self.bonuses:
-            if b.name == "x2":
+        for bonus in self.bonuses:
+            if bonus.name == "x2":
                 multiplier *= 2
-            else:
-                bonus_sum += b.value
 
-        return total * multiplier + bonus_sum
+        total_after_multiplier = numbers_sum * multiplier
+
+        # Sum of bonuses +N
+        bonus_points = sum(bonus.value for bonus in self.bonuses if bonus.name != "x2")
+
+        return total_after_multiplier + bonus_points
 
     def __str__(self):
         return f"{self.name} (Total: {self.total_score})"
