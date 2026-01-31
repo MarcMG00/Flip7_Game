@@ -64,7 +64,7 @@ class Player:
     def add_special_card(self, card):
         self.special_cards.append(card)
 
-    # Get if got any special card (normally only "THREE_CARDS_ROW")
+    # Get all of special Cards (if got any special card (normally only "THREE_CARDS_ROW"))
     def get_special_cards(self, special_type):
         return [c for c in self.special_cards if c.special_type == special_type]
 
@@ -276,7 +276,7 @@ class Game:
                     print(f"{target.name} puede ahora usar su carta THREE_IN_ROW")
                     target.remove_special_card(special)
 
-                    # Recursivty
+                    # Recursivity
                     new_target = self.choose_target(target)
                     print(f"{new_target.name} recibe 3 cartas seguidas")
 
@@ -292,7 +292,7 @@ class Game:
                 print(f"{player.name} recibe THREE_IN_ROW pero debe esperar")
                 player.add_special_card(card)
     
-    # Get player to STOP (because of special card "Stop")
+    # Get player to give special Card
     def choose_target(self, player):
         candidates = [p for p in self.players if p != player and not p.stopped and p.alive]
         return random.choice(candidates) if candidates else player
