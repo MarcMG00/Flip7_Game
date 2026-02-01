@@ -6,4 +6,4 @@ class BonusCard(Card):
         self.value = value  # None to get x2
 
     def __str__(self):
-        return f"Bono {self.name}"
+        return f"Bonus {self.name}"

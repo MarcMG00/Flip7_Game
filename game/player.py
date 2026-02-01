@@ -9,6 +9,7 @@ class Player:
         self.total_score = 0
         self.reset_round()
 
+    # Reset player's vars each new round
     def reset_round(self):
         self.numbers = Counter()
         self.bonuses: list[BonusCard] = []
@@ -19,6 +20,7 @@ class Player:
         self.flip7 = False
         self.is_receiving_three_cards_row = False
 
+    # Add Card on player's list
     def add_card(self, card):
         if isinstance(card, NumberCard):
             self.numbers[card.value] += 1
@@ -29,9 +31,11 @@ class Player:
             if card.name == "SegundaVida":
                 self.second_life = True
 
+    # Check if got a duplicated number (for number Cards)
     def has_number(self, value: int) -> bool:
         return self.numbers[value] > 0
 
+    # Count number of Cards (checked for "Flip7") (for number Cards)
     def numeric_count(self) -> int:
         return len(self.numbers)
     
@@ -42,15 +46,16 @@ class Player:
             return [self.specials[special_type]]
         return []
 
+    # Calculate score for current round
     def calculate_round_points(self) -> int:
         # Sum of normal numbers
         numbers_sum = sum(self.numbers.keys())
 
         # Apply mutliplier x2
         multiplier = 1
-        for bonus in self.bonuses:
-            if bonus.name == "x2":
-                multiplier *= 2
+        double_multiplier = next((item for item in self.bonuses if item.name == "x2"), None)
+        if double_multiplier is not None:
+            multiplier *= 2
 
         total_after_multiplier = numbers_sum * multiplier
 

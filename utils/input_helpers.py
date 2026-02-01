@@ -1,3 +1,4 @@
+# Chose player for special Cards
 def choose_from_list(prompt: str, options: list):
     if len(options) < 1:
         print("No hay nadie a quien dar la carta especial")
