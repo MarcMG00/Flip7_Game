@@ -4,6 +4,7 @@ from utils.input_helpers import choose_from_list
 from cards.number_card import NumberCard
 from cards.special_card import SpecialCard
 from cards.bonus_card import BonusCard
+from collections import deque
 
 class Game:
     # def __init__(self, players: list[Player]):
@@ -170,13 +171,19 @@ class Game:
        self.deck = Deck()
        self.current_player_index = 0
        self.round_over = False
+       self.forced_actions = deque()
+       self.pending_three_row = {}
 
     @property
     def current_player(self):
         return self.players[self.current_player_index]
 
     def next_player(self):
-        self.current_player_index = (self.current_player_index + 1) % len(self.players)
+        if all(p.stopped for p in self.players):
+            return None
+        available_players = [p for p in self.players if not p.stopped]
+
+        self.current_player_index = (self.current_player_index + 1) % len(available_players)
 
     def start_round(self):
         self.round_over = False
@@ -213,6 +220,7 @@ class Game:
                     self.deck.discard_card(card)
                     player.specials.remove(next((item for item in self.specials if item.name == "SegundaVida")))
                 else:
+                    player.add_card(card)
                     player.round_lost = True
                     player.stopped = True
                     result["extra_actions"].append("round_lost")
@@ -272,9 +280,37 @@ class Game:
             return
 
         target = state["target"]
-        self.draw_and_apply(target)
+
+        if target.stopped:
+            self.end_three_in_row()
+            return
+
+        result = self.draw_and_apply(target)
 
         state["remaining"] -= 1
-        if state["remaining"] == 0 or target.stopped:
-            target.is_receiving_three_cards_row = False
-            self.pending_three_row = None
+
+        # Si pierde la ronda
+        if "round_lost" in result["extra_actions"]:
+            self.end_three_in_row()
+            return
+
+        if state["remaining"] <= 0:
+            self.end_three_in_row()
+
+    def has_forced_action(self):
+        return self.pending_three_row is not None
+
+    def end_three_in_row(self):
+        target = self.pending_three_row["target"]
+        target.is_receiving_three_cards_row = False
+        self.pending_three_row = None
+
+    # Reset round
+    def reset_round(self):
+        self.number_cards = []
+        self.bonus_cards = []
+        self.special_cards = []
+        self.stopped = False
+        self.second_life = False
+        self.alive = True
+        self.is_receiving_three_cards_row = False
