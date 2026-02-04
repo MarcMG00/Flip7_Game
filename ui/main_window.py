@@ -1,5 +1,7 @@
 import tkinter as tk
+from cards.special_card import SpecialCard
 from ui.player_view import PlayerView
+from functools import partial
 
 class MainWindow:
     def __init__(self, game):
@@ -26,6 +28,11 @@ class MainWindow:
             self.player_views.append(view)
 
     def draw_controls(self):
+        print("=== DEBUG PLAYERS ORDER ===")
+        for i, p in enumerate(self.game.players):
+            print(i, p.name, "stopped:", p.stopped)
+        print("===========================")
+
         tk.Button(
             self.controls_frame,
             text="Robar carta",
@@ -41,26 +48,25 @@ class MainWindow:
     def on_draw(self):
         result = self.game.draw_card()
         card = result["card"]
+        print(f"enters here - card returned : {card.name}")
 
         if "round_lost" in result["extra_actions"]:
-            if all(p.stopped for p in self.game.players):
-                result["round_over"] = True
+            print("repeated Card number")
+            self.game.current_player.stopped = True
 
         if result["needs_target"]:
             self.ask_target(card)
 
-        if result["round_over"]:
+        if result["flip7"] or result["round_over"] or all(p.stopped or p.round_lost for p in self.game.players):
+            print(f"enters here - all are stopped")
             self.game.round_over = True
             self.score_round()
             self.game.reset_round()
+            self.game.start_round()
+            self.refresh()
+            return
 
-        result = self.game.next_player()
-        if result is None:
-            self.game.round_over = True
-            self.score_round()
-            self.game.reset_round()
-            self.game.next_player()
-
+        self.game.next_player()
         self.refresh()
 
     def on_stop(self):
@@ -83,29 +89,32 @@ class MainWindow:
     def ask_target(self, special_type):
         popup = tk.Toplevel(self.root)
         popup.title(f"Elegir objetivo ({special_type})")
+        available_players = [p for p in self.game.players if not p.stopped]
 
-        for p in self.game.players:
+        for p in available_players:
             if not p.stopped:
                 tk.Button(
                     popup,
                     text=p.name,
-                    command=lambda pl=p: self.on_target_selected(special_type, pl, popup)
+                    command=partial(self.on_target_selected, special_type, p, popup)
                 ).pack()
 
     def on_target_selected(self, special_type, target, popup):
+        print(f"[DEBUG] {special_type} aplicado a {target.name}")
         if special_type == "Stop":
-            target.specials[special_type.name] = special_type
+            target.specials["Stop"] = SpecialCard("Stop")
             target.stopped = True
+            print(target.cards)
 
         elif special_type == "SegundaVida":
-            target.specials[special_type.name] = special_type
+            target.specials["SegundaVida"] = SpecialCard("SegundaVida")
             target.second_life = True
 
-        elif special_type == "TresSeguidas":
-            self.game.start_three_in_row(target)
+        # elif special_type == "TresSeguidas":
+        #     self.game.start_three_in_row(target)
 
         popup.destroy()
-        self.refresh()
+        #self.refresh()
 
     def check_pending_specials(self, player):
         three = player.get_special_cards("TresSeguidas")

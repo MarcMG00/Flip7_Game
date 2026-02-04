@@ -179,11 +179,17 @@ class Game:
         return self.players[self.current_player_index]
 
     def next_player(self):
-        if all(p.stopped for p in self.players):
-            return None
-        available_players = [p for p in self.players if not p.stopped]
+        self.current_player_index = (self.current_player_index + 1) % len(self.players)
+        print(f"enters here - current_player_index : {self.current_player_index}")
 
-        self.current_player_index = (self.current_player_index + 1) % len(available_players)
+        # saltar jugadores parados
+        start = self.current_player_index
+        while self.players[self.current_player_index].stopped:
+            self.current_player_index = (self.current_player_index + 1) % len(self.players)
+            if self.current_player_index == start:
+                return None  # no one can play the round
+
+        return self.current_player
 
     def start_round(self):
         self.round_over = False
@@ -210,6 +216,7 @@ class Game:
         "needs_target": False,
         "special_type": None,
         "extra_actions": [],
+        "flip7": False,
         }
 
         # NUMBER CARD
@@ -218,7 +225,8 @@ class Game:
                 if player.second_life:
                     player.second_life = False
                     self.deck.discard_card(card)
-                    player.specials.remove(next((item for item in self.specials if item.name == "SegundaVida")))
+                    player.specials.pop("SegundaVida", None)
+                    print("usó SegundaVida -----------")
                 else:
                     player.add_card(card)
                     player.round_lost = True
@@ -229,7 +237,8 @@ class Game:
                 if player.numeric_count() == 7:
                     player.flip7 = True
                     self.round_over = True
-                    result["round_over"] = True
+                    result["flip7"] = True
+                    print("Hubo Flip7 -----------")
 
         # BONUS CARD
         elif isinstance(card, BonusCard):
@@ -242,7 +251,6 @@ class Game:
             if card.name == "Stop":
                 result["needs_target"] = True
                 result["special_type"] = "Stop"
-                player.add_card(card)
 
             # SECOND LIFE
             elif card.name == "SegundaVida":
@@ -255,15 +263,15 @@ class Game:
                     player.add_card(card)
 
             # THREE IN A ROW
-            elif card.name == "TresSeguidas":
-                if not player.is_receiving_three_cards_row:
-                    player.add_card(card)
-                    result["needs_target"] = True
-                    result["extra_actions"].append("three_row_pending")
-                else:
-                    result["needs_target"] = True
-                    result["special_type"] = "TresSeguidas"
-                    player.add_card(card)
+            # elif card.name == "TresSeguidas":
+            #     if not player.is_receiving_three_cards_row:
+            #         player.add_card(card)
+            #         result["needs_target"] = True
+            #         result["extra_actions"].append("three_row_pending")
+            #     else:
+            #         result["needs_target"] = True
+            #         result["special_type"] = "TresSeguidas"
+            #         player.add_card(card)
 
         return result
     
