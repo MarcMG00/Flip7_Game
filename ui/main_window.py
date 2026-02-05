@@ -56,6 +56,7 @@ class MainWindow:
 
         if result["needs_target"]:
             self.ask_target(card)
+            return
 
         if result["flip7"] or result["round_over"] or all(p.stopped or p.round_lost for p in self.game.players):
             print(f"enters here - all are stopped")
@@ -101,12 +102,12 @@ class MainWindow:
 
     def on_target_selected(self, special_type, target, popup):
         print(f"[DEBUG] {special_type} aplicado a {target.name}")
-        if special_type == "Stop":
+        if special_type.name == "Stop":
+            print(f"[DEBUG] enters on target selected STOP")
             target.specials["Stop"] = SpecialCard("Stop")
             target.stopped = True
-            print(target.cards)
 
-        elif special_type == "SegundaVida":
+        elif special_type.name == "SegundaVida":
             target.specials["SegundaVida"] = SpecialCard("SegundaVida")
             target.second_life = True
 
@@ -114,7 +115,8 @@ class MainWindow:
         #     self.game.start_three_in_row(target)
 
         popup.destroy()
-        #self.refresh()
+        self.game.next_player()
+        self.refresh()
 
     def check_pending_specials(self, player):
         three = player.get_special_cards("TresSeguidas")
