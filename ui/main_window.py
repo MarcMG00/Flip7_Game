@@ -28,11 +28,6 @@ class MainWindow:
             self.player_views.append(view)
 
     def draw_controls(self):
-        print("=== DEBUG PLAYERS ORDER ===")
-        for i, p in enumerate(self.game.players):
-            print(i, p.name, "stopped:", p.stopped)
-        print("===========================")
-
         tk.Button(
             self.controls_frame,
             text="Robar carta",
@@ -45,10 +40,29 @@ class MainWindow:
             command=self.on_stop
         ).pack(side=tk.LEFT, padx=10)
 
+    # Draw action
     def on_draw(self):
+        # Check if there are forced actions (normally only if a player is receiving 3 Cards in a row)
+        forced = self.game.process_forced_actions()
+        if forced:
+            print(f"[DEBUG] There are forced actions to do")
+            player = self.game.current_player
+
+            if forced.get("three_row_finished"):
+                pending = player.pending_specials()
+
+                if pending:
+                    # If having special Card after recieving 3 CArds => forced to use it
+                    self.ask_target(pending[0])
+                    return
+
+            self.refresh()
+            return
+        
+        # Draw card to next player
         result = self.game.draw_card()
         card = result["card"]
-        print(f"enters here - card returned : {card.name}")
+        print(f"[DEBUG] Card returned : {card.name}")
 
         if "round_lost" in result["extra_actions"]:
             print("repeated Card number")
@@ -58,6 +72,7 @@ class MainWindow:
             self.ask_target(card)
             return
 
+        # Round over if all players are stopped
         if result["flip7"] or result["round_over"] or all(p.stopped or p.round_lost for p in self.game.players):
             print(f"enters here - all are stopped")
             self.game.round_over = True
@@ -70,23 +85,18 @@ class MainWindow:
         self.game.next_player()
         self.refresh()
 
+    # Stop action
     def on_stop(self):
         self.game.current_player.stopped = True
         self.game.next_player()
         self.refresh()
 
+    # Refresh view
     def refresh(self):
         for view in self.player_views:
             view.refresh()
 
-    def process_forced_actions(self):
-        if self.game.has_forced_action():
-            self.game.continue_three_in_row()
-            self.refresh()
-
-            # Delay to draw Cards
-            self.root.after(800, self.process_forced_actions)
-
+    # Ask a target to give the special Card
     def ask_target(self, special_type):
         popup = tk.Toplevel(self.root)
         popup.title(f"Elegir objetivo ({special_type})")
@@ -100,10 +110,10 @@ class MainWindow:
                     command=partial(self.on_target_selected, special_type, p, popup)
                 ).pack()
 
+    # Apply special Card to target selected
     def on_target_selected(self, special_type, target, popup):
         print(f"[DEBUG] {special_type} aplicado a {target.name}")
         if special_type.name == "Stop":
-            print(f"[DEBUG] enters on target selected STOP")
             target.specials["Stop"] = SpecialCard("Stop")
             target.stopped = True
 
@@ -111,48 +121,12 @@ class MainWindow:
             target.specials["SegundaVida"] = SpecialCard("SegundaVida")
             target.second_life = True
 
-        # elif special_type == "TresSeguidas":
-        #     self.game.start_three_in_row(target)
+        elif special_type.name == "TresSeguidas":
+            self.game.start_three_in_row(target)
 
         popup.destroy()
         self.game.next_player()
         self.refresh()
-
-    def check_pending_specials(self, player):
-        three = player.get_special_cards("TresSeguidas")
-        if three:
-            return True
-        return False
-
-    def has_forced_action(self):
-        return (
-            self.pending_three_row is not None
-            or len(self.forced_actions) > 0
-        )
-    
-    def pop_forced_action(self):
-        if not self.forced_actions:
-            return None
-        return self.forced_actions.popleft()
-
-    def process_game_flow(self):
-        # 1 TresSeguidas en curso (robos automáticos)
-        if self.game.pending_three_row:
-            self.game.continue_three_in_row()
-            self.refresh()
-            self.root.after(700, self.process_game_flow)
-            return
-
-        # 2 Acciones forzadas pendientes (especiales)
-        forced = self.game.pop_forced_action()
-        if forced:
-            if forced["type"] == "TresSeguidas":
-                owner = forced["owner"]
-                self.ask_target("TresSeguidas", owner)
-            return
-
-        # 3 Si no hay nada pendiente → juego normal
-        self.on_draw()
 
     # Calulate the score of the round
     def score_round(self):

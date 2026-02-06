@@ -63,6 +63,10 @@ class Player:
         bonus_points = sum(bonus.value for bonus in self.bonuses if bonus.name != "x2")
 
         return total_after_multiplier + bonus_points
+    
+    # Cehck if player has pending special Cards to use (normally after recieving 3 in a row)
+    def pending_specials(self):
+        return [c for c in self.cards if isinstance(c, SpecialCard)]
 
     def __str__(self):
         return f"{self.name} (Total: {self.total_score})"

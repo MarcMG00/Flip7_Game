@@ -180,7 +180,6 @@ class Game:
 
     def next_player(self):
         self.current_player_index = (self.current_player_index + 1) % len(self.players)
-        print(f"enters here - current_player_index : {self.current_player_index}")
 
         # saltar jugadores parados
         start = self.current_player_index
@@ -247,6 +246,11 @@ class Game:
         # SPECIAL CARD
         elif isinstance(card, SpecialCard):
 
+            if player.is_receiving_three_cards_row:
+                # NO se usa ahora, se guarda
+                player.add_card(card)
+                return result
+            
             # STOP
             if card.name == "Stop":
                 result["needs_target"] = True
@@ -263,55 +267,61 @@ class Game:
                     player.add_card(card)
 
             # THREE IN A ROW
-            # elif card.name == "TresSeguidas":
-            #     if not player.is_receiving_three_cards_row:
-            #         player.add_card(card)
-            #         result["needs_target"] = True
-            #         result["extra_actions"].append("three_row_pending")
-            #     else:
-            #         result["needs_target"] = True
-            #         result["special_type"] = "TresSeguidas"
-            #         player.add_card(card)
+            elif card.name == "TresSeguidas":
+                if not player.is_receiving_three_cards_row:
+                    player.add_card(card)
+                    result["needs_target"] = True
+                    result["extra_actions"].append("three_row_pending")
+                else:
+                    result["needs_target"] = True
+                    result["special_type"] = "TresSeguidas"
+                    player.add_card(card)
 
         return result
     
+    # Start giving 3 Cards on player targeted
     def start_three_in_row(self, target):
         target.is_receiving_three_cards_row = True
-        self.pending_three_row = {
-            "target": target,
+        print(f"[DEBUG] {target.name} start receiving 3 cards")
+        self.forced_actions.append({
+            "type": "three_in_row",
+            "player": target,
             "remaining": 3
-        }
+        })
 
-    def continue_three_in_row(self):
-        state = self.pending_three_row
-        if not state:
-            return
+    # Check if remaining forced actions
+    def process_forced_actions(self):
+        if not self.forced_actions:
+            print(f"[DEBUG] no more forced actions")
+            return None
 
-        target = state["target"]
+        action = self.forced_actions[0]
+        player = action["player"]
+        print(f"[DEBUG] {player.name} recibiendo 3 cartas")
 
-        if target.stopped:
-            self.end_three_in_row()
-            return
+        # Draw forced Card to player targeted
+        result = self.draw_and_apply(player)
+        action["remaining"] -= 1
 
-        result = self.draw_and_apply(target)
+        # If player lost, round finished to him
+        if player.round_lost or player.stopped:
+            self.forced_actions.clear()
+            player.is_receiving_three_cards_row = False
+            print(f"[DEBUG] {player.name} repitió número recibiendo 3 cartas")
+            return None
 
-        state["remaining"] -= 1
-
-        # Si pierde la ronda
+        # If player lost, not receiving more Cards from action
         if "round_lost" in result["extra_actions"]:
-            self.end_three_in_row()
-            return
+            self.forced_actions.clear()
+            player.is_receiving_three_cards_row = False
+            return result
 
-        if state["remaining"] <= 0:
-            self.end_three_in_row()
+        # If no more Cards => finish action
+        if action["remaining"] == 0:
+            self.forced_actions.popleft()
+            player.is_receiving_three_cards_row = False
 
-    def has_forced_action(self):
-        return self.pending_three_row is not None
-
-    def end_three_in_row(self):
-        target = self.pending_three_row["target"]
-        target.is_receiving_three_cards_row = False
-        self.pending_three_row = None
+        return result
 
     # Reset round
     def reset_round(self):
