@@ -52,7 +52,7 @@ class MainWindow:
                 pending = player.pending_specials()
 
                 if pending:
-                    # If having special Card after recieving 3 CArds => forced to use it
+                    # If having special Card after recieving 3 Cards => forced to use it
                     self.ask_target(pending[0])
                     return
 
@@ -98,9 +98,17 @@ class MainWindow:
 
     # Ask a target to give the special Card
     def ask_target(self, special_type):
+        available_players = [p for p in self.game.players if not p.stopped]
+
+        # Apply to only player remaining on the round
+        if (special_type.name == "TresSeguidas" or special_type.name == "Stop") and len(available_players) == 1:
+            target = available_players[0]
+            print(f"[AUTO] TresSeguidas aplicado a {target.name}")
+            self.on_target_selected(special_type, target, popup=None)
+            return
+
         popup = tk.Toplevel(self.root)
         popup.title(f"Elegir objetivo ({special_type})")
-        available_players = [p for p in self.game.players if not p.stopped]
 
         for p in available_players:
             if not p.stopped:
@@ -122,9 +130,11 @@ class MainWindow:
             target.second_life = True
 
         elif special_type.name == "TresSeguidas":
+            target.specials["TresSeguidas"] = SpecialCard("TresSeguidas")
             self.game.start_three_in_row(target)
 
-        popup.destroy()
+        if popup:
+            popup.destroy()
         self.game.next_player()
         self.refresh()
 

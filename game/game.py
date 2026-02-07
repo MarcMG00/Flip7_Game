@@ -269,7 +269,6 @@ class Game:
             # THREE IN A ROW
             elif card.name == "TresSeguidas":
                 if not player.is_receiving_three_cards_row:
-                    player.add_card(card)
                     result["needs_target"] = True
                     result["extra_actions"].append("three_row_pending")
                 else:
@@ -320,6 +319,7 @@ class Game:
         if action["remaining"] == 0:
             self.forced_actions.popleft()
             player.is_receiving_three_cards_row = False
+            player.specials.pop("TresSeguidas", None)
 
         return result
 
