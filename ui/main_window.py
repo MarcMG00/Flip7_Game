@@ -77,6 +77,7 @@ class MainWindow:
             print(f"enters here - all are stopped")
             self.game.round_over = True
             self.score_round()
+            self.game.discard_players_cards()
             self.game.reset_round()
             self.game.start_round()
             self.refresh()

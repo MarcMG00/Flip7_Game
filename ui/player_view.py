@@ -20,8 +20,8 @@ class PlayerView:
         for widget in self.cards_frame.winfo_children():
             widget.destroy()
 
-        for n in self.player.numbers:
-            tk.Label(self.cards_frame, text=str(n), width=3).pack(side=tk.LEFT)
+        for n in self.player.number_cards:
+            tk.Label(self.cards_frame, text=str(n.value), width=3).pack(side=tk.LEFT)
 
         for b in self.player.bonuses:
             tk.Label(self.cards_frame, text=b.name).pack(side=tk.LEFT)

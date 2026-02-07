@@ -224,7 +224,8 @@ class Game:
                 if player.second_life:
                     player.second_life = False
                     self.deck.discard_card(card)
-                    player.specials.pop("SegundaVida", None)
+                    card_second_life = player.specials.pop("SegundaVida", None)
+                    self.deck.discard_card(card_second_life)
                     print("usó SegundaVida -----------")
                 else:
                     player.add_card(card)
@@ -319,9 +320,16 @@ class Game:
         if action["remaining"] == 0:
             self.forced_actions.popleft()
             player.is_receiving_three_cards_row = False
-            player.specials.pop("TresSeguidas", None)
+            card_three_row = player.specials.pop("TresSeguidas", None)
+            self.deck.discard_card(card_three_row)
 
         return result
+
+    # Discards player's Cards at the end of the round
+    def discard_players_cards(self):
+        for player in self.players:
+            for card in player.all_cards():
+                self.deck.discard_card(card)
 
     # Reset round
     def reset_round(self):
