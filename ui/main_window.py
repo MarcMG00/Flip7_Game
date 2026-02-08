@@ -45,6 +45,11 @@ class MainWindow:
         # Check if there are forced actions (normally only if a player is receiving 3 Cards in a row)
         forced = self.game.process_forced_actions()
         if forced:
+            # If forced but has done flip7, it ends instantly
+            if result["flip7"]:
+                self.finish_round()
+                return
+            
             print(f"[DEBUG] There are forced actions to do")
             player = self.game.current_player
 
@@ -74,13 +79,7 @@ class MainWindow:
 
         # Round over if all players are stopped
         if result["flip7"] or result["round_over"] or all(p.stopped or p.round_lost for p in self.game.players):
-            print(f"enters here - all are stopped")
-            self.game.round_over = True
-            self.score_round()
-            self.game.discard_players_cards()
-            self.game.reset_round()
-            self.game.start_round()
-            self.refresh()
+            self.finish_round()
             return
 
         self.game.next_player()
@@ -89,8 +88,12 @@ class MainWindow:
     # Stop action
     def on_stop(self):
         self.game.current_player.stopped = True
+
+        if all(p.stopped or p.round_lost for p in self.game.players):
+            self.finish_round()
+            
         self.game.next_player()
-        self.refresh()
+        self.refresh()    
 
     # Refresh view
     def refresh(self):
@@ -155,6 +158,20 @@ class MainWindow:
                 if p.flip7:
                     points += 15
                 p.total_score += points
+
+    # Actions when finishing round (reset vars + calculate scores)
+    def finish_round(self):
+        print(f"[DEBUG] all players are stopped/ or Flip7")
+        self.game.round_over = True
+        self.score_round()
+
+        for view in self.player_views:
+            view.refresh_total_score()
+
+        self.game.discard_players_cards()
+        self.game.reset_round()
+        self.game.start_round()
+        self.refresh()
 
     def run(self):
         self.root.mainloop()
