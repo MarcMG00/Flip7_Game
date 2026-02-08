@@ -101,8 +101,16 @@ class MainWindow:
     def ask_target(self, special_type):
         available_players = [p for p in self.game.players if not p.stopped]
 
-        # Apply to only player remaining on the round
-        if (special_type.name == "TresSeguidas" or special_type.name == "Stop") and len(available_players) == 1:
+        if special_type.name == "SegundaVida" and len(available_players) == 1:
+            target = available_players[0]
+
+            if "SegundaVida" in target.specials:
+                print(f"[AUTO] Segunda vida descartada (no se puede aplicar a nadie más)")
+                self.game.deck.discard_card(special_type)
+                return
+        
+        # Apply Card to only player remaining on the round
+        elif (special_type.name == "TresSeguidas" or special_type.name == "Stop") and len(available_players) == 1:
             target = available_players[0]
             print(f"[AUTO] TresSeguidas aplicado a {target.name}")
             self.on_target_selected(special_type, target, popup=None)
