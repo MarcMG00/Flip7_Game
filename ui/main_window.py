@@ -14,6 +14,17 @@ class MainWindow:
         self.players_frame = tk.Frame(self.root)
         self.players_frame.pack(side=tk.TOP, fill=tk.BOTH)
 
+        self.message_frame = tk.Frame(self.root, bd=1, relief="sunken")
+        self.message_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+
+        self.message_label = tk.Label(
+            self.message_frame,
+            text="Bienvenido a Flip 7",
+            font=("Arial", 11),
+            anchor="w"
+        )
+        self.message_label.pack(fill=tk.X, padx=10, pady=5)
+
         self.controls_frame = tk.Frame(self.root)
         self.controls_frame.pack(side=tk.BOTTOM, pady=10)
 
@@ -40,18 +51,25 @@ class MainWindow:
             command=self.on_stop
         ).pack(side=tk.LEFT, padx=10)
 
+    def set_message(self, text):
+        self.message_label.config(text=text)
+
     # Draw action
     def on_draw(self):
+        player = self.game.current_player
+
         # Check if there are forced actions (normally only if a player is receiving 3 Cards in a row)
         forced = self.game.process_forced_actions()
         if forced:
-            player = self.game.current_player
             # If forced but has done flip7, it ends instantly
             if player.numeric_count() == 7:
                 self.finish_round()
                 return
             
             print(f"[DEBUG] There are forced actions to do")
+            self.set_message(
+                f"{player.name} recibe una carta por Tres Seguidas"
+            )
 
             if forced.get("three_row_finished"):
                 pending = player.pending_specials()
@@ -68,13 +86,19 @@ class MainWindow:
         result = self.game.draw_card()
         card = result["card"]
         print(f"[DEBUG] Card returned : {card.name}")
+        self.set_message(f"{player.name} roba una carta: {card.name}")
 
         if "round_lost" in result["extra_actions"]:
-            print("repeated Card number")
+            self.set_message(
+                f"{self.game.current_player.name} repite número y pierde la ronda"
+            )
             self.game.current_player.stopped = True
 
         if result["needs_target"]:
             self.ask_target(card)
+            self.set_message(
+                f"{self.game.current_player.name} debe elegir objetivo para {card.name}"
+            )
             return
 
         # Round over if all players are stopped
@@ -87,7 +111,9 @@ class MainWindow:
 
     # Stop action
     def on_stop(self):
-        self.game.current_player.stopped = True
+        player = self.game.current_player
+        self.set_message(f"{player.name} se planta")
+        player.stopped = True
 
         if all(p.stopped or p.round_lost for p in self.game.players):
             self.finish_round()
@@ -107,8 +133,12 @@ class MainWindow:
         if special_type.name == "SegundaVida" and len(available_players) == 1:
             target = available_players[0]
 
+            # Apply Card to only player remaining on the round
             if "SegundaVida" in target.specials:
                 print(f"[AUTO] Segunda vida descartada (no se puede aplicar a nadie más)")
+                self.set_message(
+                    f"{special_type.name} se aplica automáticamente a {target.name}"
+                )
                 self.game.deck.discard_card(special_type)
                 return
         
@@ -116,6 +146,9 @@ class MainWindow:
         elif (special_type.name == "TresSeguidas" or special_type.name == "Stop") and len(available_players) == 1:
             target = available_players[0]
             print(f"[AUTO] TresSeguidas aplicado a {target.name}")
+            self.set_message(
+                f"{special_type.name} se aplica automáticamente a {target.name}"
+            )
             self.on_target_selected(special_type, target, popup=None)
             return
 
@@ -133,6 +166,9 @@ class MainWindow:
     # Apply special Card to target selected
     def on_target_selected(self, special_type, target, popup):
         print(f"[DEBUG] {special_type} aplicado a {target.name}")
+        self.set_message(
+            f"{self.game.current_player.name} da {special_type.name} a {target.name}"
+        )
         if special_type.name == "Stop":
             target.specials["Stop"] = SpecialCard("Stop")
             target.stopped = True
