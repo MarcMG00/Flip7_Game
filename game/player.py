@@ -1,4 +1,3 @@
-from collections import Counter
 from cards.number_card import NumberCard
 from cards.bonus_card import BonusCard
 from cards.special_card import SpecialCard
@@ -11,7 +10,7 @@ class Player:
 
     # Reset player's vars each new round
     def reset_round(self):
-        self.numbers = Counter()
+        self.number_cards = []
         self.bonuses: list[BonusCard] = []
         self.specials: dict[str, SpecialCard] = {}
         self.stopped = False
@@ -23,7 +22,7 @@ class Player:
     # Add Card on player's list
     def add_card(self, card):
         if isinstance(card, NumberCard):
-            self.numbers[card.value] += 1
+            self.number_cards.append(card)
         elif isinstance(card, BonusCard):
             self.bonuses.append(card)
         elif isinstance(card, SpecialCard):
@@ -33,11 +32,11 @@ class Player:
 
     # Check if got a duplicated number (for number Cards)
     def has_number(self, value: int) -> bool:
-        return self.numbers[value] > 0
+        return any(card.value == value for card in self.number_cards)
 
     # Count number of Cards (checked for "Flip7") (for number Cards)
     def numeric_count(self) -> int:
-        return len(self.numbers)
+        return len(self.number_cards)
     
     # Get all of special Cards (if got any special card (normally only "THREE_CARDS_ROW"))
     def get_special_cards(self, special_type):
@@ -49,7 +48,7 @@ class Player:
     # Calculate score for current round
     def calculate_round_points(self) -> int:
         # Sum of normal numbers
-        numbers_sum = sum(self.numbers.keys())
+        numbers_sum = sum(card.value for card in self.number_cards)
 
         # Apply mutliplier x2
         multiplier = 1
@@ -63,6 +62,18 @@ class Player:
         bonus_points = sum(bonus.value for bonus in self.bonuses if bonus.name != "x2")
 
         return total_after_multiplier + bonus_points
+    
+    # Cehck if player has pending special Cards to use (normally after recieving 3 in a row)
+    def pending_specials(self):
+        return [c for c in self.cards if isinstance(c, SpecialCard)]
+    
+    # Get all Cards from player
+    def all_cards(self):
+        return (
+            self.number_cards +
+            self.bonuses +
+            list(self.specials.values())
+        )
 
     def __str__(self):
         return f"{self.name} (Total: {self.total_score})"

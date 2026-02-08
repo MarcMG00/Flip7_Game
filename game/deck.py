@@ -50,3 +50,10 @@ class Deck:
     # Discard Card to discarded deck
     def discard_card(self, card):
         self.discard.append(card)
+
+    # Reset deck (when restarting the game)
+    def reset(self):
+        self.cards.clear()
+        self.discard.clear()
+        self._build()
+        self.shuffle()
