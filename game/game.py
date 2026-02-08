@@ -340,3 +340,13 @@ class Game:
         self.second_life = False
         self.alive = True
         self.is_receiving_three_cards_row = False
+
+    # Check if game ended
+    def check_game_over(self, target_score=200):
+        candidates = [p for p in self.players if p.total_score >= target_score]
+        if not candidates:
+            return None
+
+        # Winner = highest points
+        winner = max(self.players, key=lambda p: p.total_score)
+        return winner

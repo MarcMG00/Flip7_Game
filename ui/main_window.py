@@ -45,13 +45,13 @@ class MainWindow:
         # Check if there are forced actions (normally only if a player is receiving 3 Cards in a row)
         forced = self.game.process_forced_actions()
         if forced:
+            player = self.game.current_player
             # If forced but has done flip7, it ends instantly
-            if result["flip7"]:
+            if player.numeric_count() == 7:
                 self.finish_round()
                 return
             
             print(f"[DEBUG] There are forced actions to do")
-            player = self.game.current_player
 
             if forced.get("three_row_finished"):
                 pending = player.pending_specials()
@@ -91,7 +91,7 @@ class MainWindow:
 
         if all(p.stopped or p.round_lost for p in self.game.players):
             self.finish_round()
-            
+
         self.game.next_player()
         self.refresh()    
 
@@ -161,17 +161,67 @@ class MainWindow:
 
     # Actions when finishing round (reset vars + calculate scores)
     def finish_round(self):
-        print(f"[DEBUG] all players are stopped/ or Flip7")
+        print(f"[DEBUG] all players are stopped / or Flip7")
         self.game.round_over = True
         self.score_round()
 
         for view in self.player_views:
             view.refresh_total_score()
 
+        winner = self.game.check_game_over()
+        if winner:
+            self.show_winner(winner)
+            return
+    
         self.game.discard_players_cards()
         self.game.reset_round()
         self.game.start_round()
         self.refresh()
+
+    # Show winner
+    def show_winner(self, winner):
+        popup = tk.Toplevel(self.root)
+        popup.title("🏆 Fin del juego")
+        popup.geometry("300x200")
+
+        tk.Label(
+            popup,
+            text=f"🏆 GANADOR 🏆\n\n{winner.name}\n\n{winner.total_score} puntos",
+            font=("Arial", 14, "bold"),
+            fg="green",
+            justify="center"
+        ).pack(pady=20)
+
+        tk.Button(
+            popup,
+            text="🔄 Reiniciar juego",
+            command=lambda: self.restart_game(popup)
+        ).pack(pady=10)
+
+        tk.Button(
+            popup,
+            text="❌ Salir",
+            command=self.root.destroy
+        ).pack()
+
+    # Reset the game
+    def restart_game(self, popup):
+        popup.destroy()
+
+        # Reset players
+        for p in self.game.players:
+            p.total_score = 0
+            p.reset_round()
+
+        # Reset game
+        self.game.deck.reset()
+        self.game.current_player_index = 0
+        self.game.round_over = False
+
+        self.refresh()
+
+        for view in self.player_views:
+            view.refresh_total_score()
 
     def run(self):
         self.root.mainloop()

@@ -42,6 +42,9 @@ class PlayerView:
         else:
             self.frame.config(highlightbackground="black", highlightthickness=3)
 
+        if self.player.total_score >= 200:
+            self.frame.config(highlightbackground="gold", highlightthickness=4)
+
 
     def refresh_total_score(self):
         self.total_score_label.config(
