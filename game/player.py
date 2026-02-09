@@ -6,6 +6,7 @@ class Player:
     def __init__(self, name: str):
         self.name = name
         self.total_score = 0
+        self.must_resolve_specials = False
         self.reset_round()
 
     # Reset player's vars each new round
@@ -18,6 +19,7 @@ class Player:
         self.second_life = False
         self.flip7 = False
         self.is_receiving_three_cards_row = False
+        self.must_resolve_specials = False
 
     # Add Card on player's list
     def add_card(self, card):
@@ -63,9 +65,19 @@ class Player:
 
         return total_after_multiplier + bonus_points
     
-    # Cehck if player has pending special Cards to use (normally after recieving 3 in a row)
+    # Check if player has pending special Cards to use (normally after recieving 3 in a row)
     def pending_specials(self):
-        return [c for c in self.cards if isinstance(c, SpecialCard)]
+        pending = []
+
+        for name, card in self.specials.items():
+            if name == "SegundaVida":
+                if self.second_life:
+                    pending.append(card)
+
+            elif name == "Stop":
+                pending.append(card)
+
+        return pending
     
     # Get all Cards from player
     def all_cards(self):

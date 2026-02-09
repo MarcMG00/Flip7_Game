@@ -71,13 +71,19 @@ class MainWindow:
                 f"{player.name} recibe una carta por Tres Seguidas"
             )
 
-            if forced.get("three_row_finished"):
+            if player.must_resolve_specials:
                 pending = player.pending_specials()
-
                 if pending:
                     # If having special Card after recieving 3 Cards => forced to use it
+                    self.set_message(
+                        f"{player.name} debe usar {pending[0].name}"
+                    )
+
                     self.ask_target(pending[0])
                     return
+                else:
+                    # There's no more special Cards to resolve
+                    player.must_resolve_specials = False
 
             self.refresh()
             return
@@ -130,18 +136,21 @@ class MainWindow:
     def ask_target(self, special_type):
         available_players = [p for p in self.game.players if not p.stopped]
 
-        if special_type.name == "SegundaVida" and len(available_players) == 1:
-            target = available_players[0]
+        if special_type.name == "SegundaVida":
+            if len(available_players) == 1:
+                target = available_players[0]
 
-            # Apply Card to only player remaining on the round
-            if "SegundaVida" in target.specials:
-                print(f"[AUTO] Segunda vida descartada (no se puede aplicar a nadie más)")
-                self.set_message(
-                    f"{special_type.name} se aplica automáticamente a {target.name}"
-                )
-                self.game.deck.discard_card(special_type)
-                return
-        
+                # Apply Card to only player remaining on the round
+                if "SegundaVida" in target.specials:
+                    print(f"[AUTO] Segunda vida descartada (no se puede aplicar a nadie más)")
+                    self.set_message(
+                        f"{special_type.name} se aplica automáticamente a {target.name}"
+                    )
+                    self.game.deck.discard_card(special_type)
+                    return
+            else:
+                available_players = [p for p in self.game.players if (not p.stopped and not p.second_life)]
+
         # Apply Card to only player remaining on the round
         elif (special_type.name == "TresSeguidas" or special_type.name == "Stop") and len(available_players) == 1:
             target = available_players[0]
@@ -165,6 +174,10 @@ class MainWindow:
 
     # Apply special Card to target selected
     def on_target_selected(self, special_type, target, popup):
+        current = self.game.current_player
+        # Remove specials from player (will be passed to target)
+        current.specials.pop(special_type.name, None)
+
         print(f"[DEBUG] {special_type} aplicado a {target.name}")
         self.set_message(
             f"{self.game.current_player.name} da {special_type.name} a {target.name}"
@@ -180,6 +193,14 @@ class MainWindow:
         elif special_type.name == "TresSeguidas":
             target.specials["TresSeguidas"] = SpecialCard("TresSeguidas")
             self.game.start_three_in_row(target)
+
+        # If was resolving special Cards, continue forced actiona
+        if target.must_resolve_specials:
+            if target.pending_specials():
+                self.ask_target(target.pending_specials()[0])
+                return
+            else:
+                target.must_resolve_specials = False
 
         if popup:
             popup.destroy()
